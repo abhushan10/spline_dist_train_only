@@ -101,21 +101,28 @@ for epoch in range(num_epochs):
 
     print(f'Epoch [{epoch+1}/{num_epochs}], Loss: {loss.item()}')
 
-# Visualize a sample
-sample_fluorescence, sample_mask = dataset[0]
-sample_fluorescence = sample_fluorescence.unsqueeze(0).to(device)
+# Set the path to your test image
+test_image_path = 'test/fluorescence/test_1.tif'
+
+# Load the test image
+test_image = plt.imread(test_image_path)
+
+# Preprocess the test image
+test_image = ToPILImage()(test_image)
+test_image = Resize((256, 256))(test_image)
+test_image = ToTensor()(test_image)
+test_image = test_image.unsqueeze(0).to(device)
+
+# Make predictions on the test image
 with torch.no_grad():
-    output_mask = model(sample_fluorescence)
+    output_mask = model(test_image)
+    output_mask = torch.nn.functional.interpolate(output_mask, size=(256, 256), mode='bilinear', align_corners=False)
+    output_mask = output_mask.cpu().squeeze().numpy()
 
-output_mask = torch.nn.functional.interpolate(output_mask, size=(256, 256), mode='bilinear', align_corners=False)
-output_mask = output_mask.cpu().squeeze().numpy()
-
-# Plot the sample fluorescence and mask images
-fig, axes = plt.subplots(1, 3, figsize=(10, 4))
-axes[0].imshow(sample_fluorescence.squeeze().cpu().numpy(), cmap='gray')
-axes[0].set_title('Fluorescence Image')
-axes[1].imshow(sample_mask.squeeze().cpu().numpy(), cmap='gray')
-axes[1].set_title('Ground Truth Mask')
-axes[2].imshow(output_mask, cmap='gray')
-axes[2].set_title('Predicted Mask')
+# Visualize the test image and the predicted mask
+fig, axes = plt.subplots(1, 2, figsize=(8, 4))
+axes[0].imshow(test_image.squeeze().cpu().numpy(), cmap='gray')
+axes[0].set_title('Test Image')
+axes[1].imshow(output_mask, cmap='gray')
+axes[1].set_title('Predicted Mask')
 plt.show()
